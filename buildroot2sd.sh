@@ -35,16 +35,22 @@ PWD=$(pwd)
 PATH_GIT="/home/${USER}/GIT/raspberrypi/buildroot"
 if [ "$MODEL" = "1b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b.dtb"
 elif [ "$MODEL" = "cm" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-cm"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-cm.dtb"
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "1a+" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1a+"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b.dtb"
 elif [ "$MODEL" = "1b+" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b+"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b-plus.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-3b.dtb"
 else
 	echo "[ERROR] Raspberry pi model unknown: $MODEL"
 	exit 1
@@ -110,6 +116,9 @@ elif [ ! -f $CONFIG ]; then
 elif [ ! -f $CMDLINE ]; then
     echo "[ERROR] Missing file: $CMDLINE"
     exit 1
+elif [ ! -f $DTB ]; then
+    echo "[ERROR] Missing file: $DTB"
+    exit 1    
 elif [ ! -f $KERNEL ]; then
     echo "[ERROR] Missing file: $KERNEL"
     exit 1
@@ -168,6 +177,13 @@ else
 		echo "[INFO] cmdline.txt file copied to $SD_BOOT_PATH successfully"
 	else
 		echo "[ERROR] Error copying cmdline.txt to $SD_BOOT_PATH"
+		exit 1
+	fi
+	sudo sh -c "cp $DTB $SD_BOOT_PATH> /dev/null 2>&1"
+	if [ "$?" = "0" ]; then
+		echo "[INFO] .dtb file copied to $SD_BOOT_PATH successfully"
+	else
+		echo "[ERROR] Error copying .dtb to $SD_BOOT_PATH"
 		exit 1
 	fi
 	#/* copy kernel to sd boot partition */
