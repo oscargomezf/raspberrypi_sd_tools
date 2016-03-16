@@ -24,6 +24,8 @@ if [ "$#" != "2" ]; then
 	echo "\t\tcm  -> tedpi-cm  : raspberry pi cm v1.1 code: 0011"
 	echo "\t\t2b  -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
 	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: XXX"
+	echo "\t-- special models --"
+	echo "\t\t2b-pg-fla3 -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
 	exit 1
 fi
 
@@ -46,7 +48,9 @@ elif [ "$MODEL" = "cm" ]; then
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
 	DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b.dtb"
-	#DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b-tedesys.dtb"
+elif [ "$MODEL" = "2b-pg-fla3" ]; then
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-point-grey-flea3"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
 	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-3b.dtb"
@@ -234,7 +238,7 @@ EOF"
 #device tree
 device_tree=bcm2708-rpi-cm.dtb
 EOF"
-	elif [ "$MODEL" = "2b" ]; then
+	elif [ "$MODEL" = "2b" -o "$MODEL" = "2b-pg-fla3" ]; then
 		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
 #device tree
 device_tree=bcm2709-rpi-2-b.dtb
@@ -328,6 +332,63 @@ EOF"
 		sudo sh -c "mkdir -p ${SD_ROOTFS_PATH}/boot"
 		echo "[INFO] Set up ${SD_ROOTFS_PATH}/etc/fstab"
 	fi
+	
+	if [ "$MODEL" = "2b-pg-fla3" ]; then
+		#/* build /etc/udev/rules.d/40-pgr.rules */
+		sudo sh -c "cat << 'EOF' > "${SD_ROOTFS_PATH}/etc/udev/rules.d/40-pgr.rules"
+
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2000\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2001\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2002\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2003\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2004\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2005\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3000\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3001\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3004\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3005\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3006\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3007\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3008\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"300A\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"300B\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3100\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3101\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3102\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3103\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3104\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3105\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3106\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3107\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3108\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3109\", MODE=\"0664\", GROUP=\"$grpname\"
+ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3300\", MODE=\"0664\", GROUP=\"$grpname\"
+KERNEL==\"raw1394\", MODE=\"0664\", GROUP=\"$grpname\"
+KERNEL==\"video1394*\", MODE=\"0664\", GROUP=\"$grpname\"
+SUBSYSTEM==\"firewire\", GROUP=\"pgrimaging\"
+SUBSYSTEM==\"usb\", GROUP=\"pgrimaging\"
+
+EOF"
+		if [ "$?" = "0" ]; then
+			sudo sh -c "chmod 644 ${SD_ROOTFS_PATH}/etc/udev/rules.d/40-pgr.rules"
+			echo "[INFO] Built ${SD_ROOTFS_PATH}/etc/udev/rules.d/40-pgr.rules"
+		fi
+		#/* set up /etc/group */
+		sudo sh -c "cat << 'EOF' >> "${SD_ROOTFS_PATH}/etc/group"
+pgrimaging:x:1001:root
+
+EOF"
+		if [ "$?" = "0" ]; then
+			echo "[INFO] Set up ${SD_ROOTFS_PATH}/etc/group"
+		fi
+		
+		FLY_CAPTURE_PATH="/home/oscargomez/Desktop/point_grey_documents/flycapture.2.9.3.13_armhf"
+		sudo sh -c "cp -r --preserve=mode ${FLY_CAPTURE_PATH}/bin/ ${FLY_CAPTURE_PATH}/include/ ${FLY_CAPTURE_PATH}/lib/ ${SD_ROOTFS_PATH}"
+		if [ "$?" = "0" ]; then
+			echo "[INFO] Point Grey Flea3 Fly capture bins for arm saved correctly to ${SD_ROOTFS_PATH}"
+		fi
+	fi
+	
 	#/* umount sd rootfs partition */
 	sync
 	sudo sh -c "umount -f ${DRIVE}2 > /dev/null 2>&1"
