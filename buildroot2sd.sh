@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 #/* @file buildroot2sd.sh
 #   @author Oscar Gómez Fuente <oscargomez@tedesys.com>
 #   @ingroup TEDESYS GLOBAL S.L.
@@ -17,6 +17,7 @@ MODEL="$2"
 if [ "$#" != "2" ]; then
 	echo "[INFO] Usage: $0 path_drive raspberrypi_model"
 	echo "\tRaspberry pi models:"
+	echo "\t\t1a  -> tedpi-1a  : raspberry pi 1 A code: 0008"
 	echo "\t\t1a+ -> tedpi-1a+ : raspberry pi 1 A+ v1.2 code: 0012"
 	echo "\t\t1b  -> tedpi-1b  : raspberry pi 1 B v2.1 code: 000e"
 	echo "\t\t1b+ -> tedpi-1b+ : raspberry pi 1 B+ v1.1 code: 0010"
@@ -33,21 +34,19 @@ NAME_P2="rootfs"
 #/* Path of bins */
 PWD=$(pwd)
 PATH_GIT="/home/${USER}/GIT/raspberrypi/buildroot"
-if [ "$MODEL" = "1b" ]; then
+if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
 	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b.dtb"
+elif [ "$MODEL" = "1a+" -o "$MODEL" = "1b+" ]; then
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b+"
+	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b-plus.dtb"
 elif [ "$MODEL" = "cm" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-cm"
 	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-cm.dtb"
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
 	DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b.dtb"
-elif [ "$MODEL" = "1a+" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1a+"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b.dtb"
-elif [ "$MODEL" = "1b+" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b+"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b-plus.dtb"
+	#DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b-tedesys.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
 	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-3b.dtb"
@@ -64,7 +63,8 @@ FIXUP="${BUILDROOT_PATH}/output/images/rpi-firmware/fixup.dat"
 CONFIG="${BUILDROOT_PATH}/output/images/rpi-firmware/config.txt"
 CMDLINE="${BUILDROOT_PATH}/output/images/rpi-firmware/cmdline.txt"
 #/* kernel */
-KERNEL="${BUILDROOT_PATH}/output/images/zImage"
+#KERNEL="${BUILDROOT_PATH}/output/images/zImage"
+KERNEL="${BUILDROOT_PATH}/output/images/kernel-marked/zImage"
 #/* root fs */
 ROOTFS="${BUILDROOT_PATH}/output/images/rootfs.tar"
 SD_PATH="/mnt/sd_media"
@@ -194,6 +194,68 @@ else
 		echo "[ERROR] Error copying kernel to $SD_BOOT_PATH"
 		exit 1
 	fi
+	
+	#/* Build config.txt */
+	sudo sh -c "cat << 'EOF' > "${SD_BOOT_PATH}/config.txt"
+# Please note that this is only a sample, we recommend you to change it to fit
+# your needs.
+# You should override this file using a post-build script.
+# See http://buildroot.org/manual.html#rootfs-custom
+# and http://elinux.org/RPiconfig for a description of config.txt syntax
+
+kernel=zImage
+
+# To use an external initramfs file
+#initramfs rootfs.cpio.gz
+
+# Disable overscan assuming the display supports displaying the full resolution
+# If the text shown on the screen disappears off the edge, comment this out
+disable_overscan=1
+
+# How much memory in MB to assign to the GPU on Pi models having
+# 256, 512 or 1024 MB total memory
+gpu_mem_256=100
+gpu_mem_512=100
+gpu_mem_1024=100
+
+EOF"
+	if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
+		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
+#device tree
+device_tree=bcm2708-rpi-b.dtb
+EOF"
+	elif [ "$MODEL" = "1a+" -o "$MODEL" = "1b+" ]; then
+		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
+#device tree
+device_tree=bcm2708-rpi-b-plus.dtb
+EOF"
+	elif [ "$MODEL" = "cm" ]; then
+		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
+#device tree
+device_tree=bcm2708-rpi-cm.dtb
+EOF"
+	elif [ "$MODEL" = "2b" ]; then
+		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
+#device tree
+device_tree=bcm2709-rpi-2-b.dtb
+EOF"
+	elif [ "$MODEL" = "3b" ]; then
+		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
+#device tree
+device_tree=bcm2710-rpi-3-b.dtb
+EOF"
+	fi
+	sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
+dtparam=i2c_arm=on,i2c_arm_baudrate=200000
+dtparam=spi=on
+dtparam=watchdog=on
+
+EOF"
+	if [ "$?" = "0" ]; then
+		sudo sh -c "chmod 755 ${SD_BOOT_PATH}/config.txt"
+		echo "[INFO] Built ${SD_BOOT_PATH}/config.txt file"
+	fi
+
 	#/* umount sd boot partition */
 	sync
 	sudo sh -c "umount -f ${DRIVE}1 > /dev/null 2>&1"
@@ -211,6 +273,60 @@ else
 	else
 		echo "[ERROR] Error copying $ROOTFS file to $SD_ROOTFS_PATH"
 		exit 1
+	fi
+	
+	#/* Build S18loadmod file */
+	sudo sh -c "cat << 'EOF' > "${SD_ROOTFS_PATH}/etc/init.d/S18loadmod"
+#!/bin/sh
+#
+# load modules
+#
+
+MODULES_PATH=\"/etc/modules\"
+case \"\$1\" in
+	start)
+		echo \"Loading modules in ${MODULES_PATH}...\"
+		for line in \$(cat \${MODULES_PATH});
+		do
+			[[ \$line = \#* ]] && continue
+			modprobe \$line;
+		done
+		;;
+	stop)
+		;;
+	restart|reload)
+		;;
+	*)
+		echo \"Usage: \$0 {start|stop|restart}\"
+		exit 1
+esac
+
+exit \$?
+
+EOF"
+	if [ "$?" = "0" ]; then
+		sudo sh -c "chmod 755 ${SD_ROOTFS_PATH}/etc/init.d/S18loadmod"
+		echo "[INFO] Built ${SD_ROOTFS_PATH}/etc/init.d/S18loadmod file"
+	fi
+	
+	#/* Build /etc/modules */
+	sudo sh -c "cat << 'EOF' > "${SD_ROOTFS_PATH}/etc/modules"
+i2c-dev
+
+EOF"
+	if [ "$?" = "0" ]; then
+		sudo sh -c "chmod 644 ${SD_ROOTFS_PATH}/etc/modules"
+		echo "[INFO] Built ${SD_ROOTFS_PATH}/etc/modules"
+	fi
+
+	#/* set up /etc/fstab */
+	sudo sh -c "cat << 'EOF' >> "${SD_ROOTFS_PATH}/etc/fstab"
+/dev/mmcblk0p1  /boot           vfat    defaults        0       2  
+
+EOF"
+	if [ "$?" = "0" ]; then
+		sudo sh -c "mkdir -p ${SD_ROOTFS_PATH}/boot"
+		echo "[INFO] Set up ${SD_ROOTFS_PATH}/etc/fstab"
 	fi
 	#/* umount sd rootfs partition */
 	sync
