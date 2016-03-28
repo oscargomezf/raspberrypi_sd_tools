@@ -2,8 +2,8 @@
 #/* @file buildroot2sd.sh
 #   @author Oscar Gómez Fuente <oscargomez@tedesys.com>
 #   @ingroup TEDESYS GLOBAL S.L.
-#   @date 2016-03-07
-#   @version 1.0.0
+#   @date 2016-03-23
+#   @version 1.1.0
 #   @section DESCRIPTION
 #    Script to compile buildroot and save boot and rootfs on sd card or eMMC for different raspberry pi models
 #
@@ -38,22 +38,22 @@ PWD=$(pwd)
 PATH_GIT="/home/${USER}/GIT/raspberrypi/buildroot"
 if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-b.dtb"
 elif [ "$MODEL" = "1a+" -o "$MODEL" = "1b+" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b+"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-b-plus.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-b-plus.dtb"
 elif [ "$MODEL" = "cm" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-cm"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-cm.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-cm.dtb"
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "2b-pg-fla3" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-point-grey-flea3"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2709-rpi-2-b.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
-	DTB="${BUILDROOT_PATH}/output/images/bcm2708-rpi-3b.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-3b.dtb"
 else
 	echo "[ERROR] Raspberry pi model unknown: $MODEL"
 	exit 1
@@ -198,67 +198,6 @@ else
 		echo "[ERROR] Error copying kernel to $SD_BOOT_PATH"
 		exit 1
 	fi
-	
-	#/* Build config.txt */
-	sudo sh -c "cat << 'EOF' > "${SD_BOOT_PATH}/config.txt"
-# Please note that this is only a sample, we recommend you to change it to fit
-# your needs.
-# You should override this file using a post-build script.
-# See http://buildroot.org/manual.html#rootfs-custom
-# and http://elinux.org/RPiconfig for a description of config.txt syntax
-
-kernel=zImage
-
-# To use an external initramfs file
-#initramfs rootfs.cpio.gz
-
-# Disable overscan assuming the display supports displaying the full resolution
-# If the text shown on the screen disappears off the edge, comment this out
-disable_overscan=1
-
-# How much memory in MB to assign to the GPU on Pi models having
-# 256, 512 or 1024 MB total memory
-gpu_mem_256=100
-gpu_mem_512=100
-gpu_mem_1024=100
-
-EOF"
-	if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
-		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
-#device tree
-device_tree=bcm2708-rpi-b.dtb
-EOF"
-	elif [ "$MODEL" = "1a+" -o "$MODEL" = "1b+" ]; then
-		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
-#device tree
-device_tree=bcm2708-rpi-b-plus.dtb
-EOF"
-	elif [ "$MODEL" = "cm" ]; then
-		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
-#device tree
-device_tree=bcm2708-rpi-cm.dtb
-EOF"
-	elif [ "$MODEL" = "2b" -o "$MODEL" = "2b-pg-fla3" ]; then
-		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
-#device tree
-device_tree=bcm2709-rpi-2-b.dtb
-EOF"
-	elif [ "$MODEL" = "3b" ]; then
-		sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
-#device tree
-device_tree=bcm2710-rpi-3-b.dtb
-EOF"
-	fi
-	sudo sh -c "cat << 'EOF' >> "${SD_BOOT_PATH}/config.txt"
-dtparam=i2c_arm=on,i2c_arm_baudrate=200000
-dtparam=spi=on
-dtparam=watchdog=on
-
-EOF"
-	if [ "$?" = "0" ]; then
-		sudo sh -c "chmod 755 ${SD_BOOT_PATH}/config.txt"
-		echo "[INFO] Built ${SD_BOOT_PATH}/config.txt file"
-	fi
 
 	#/* umount sd boot partition */
 	sync
@@ -277,116 +216,6 @@ EOF"
 	else
 		echo "[ERROR] Error copying $ROOTFS file to $SD_ROOTFS_PATH"
 		exit 1
-	fi
-	
-	#/* Build S18loadmod file */
-	sudo sh -c "cat << 'EOF' > "${SD_ROOTFS_PATH}/etc/init.d/S18loadmod"
-#!/bin/sh
-#
-# load modules
-#
-
-MODULES_PATH=\"/etc/modules\"
-case \"\$1\" in
-	start)
-		echo \"Loading modules in ${MODULES_PATH}...\"
-		for line in \$(cat \${MODULES_PATH});
-		do
-			[[ \$line = \#* ]] && continue
-			modprobe \$line;
-		done
-		;;
-	stop)
-		;;
-	restart|reload)
-		;;
-	*)
-		echo \"Usage: \$0 {start|stop|restart}\"
-		exit 1
-esac
-
-exit \$?
-
-EOF"
-	if [ "$?" = "0" ]; then
-		sudo sh -c "chmod 755 ${SD_ROOTFS_PATH}/etc/init.d/S18loadmod"
-		echo "[INFO] Built ${SD_ROOTFS_PATH}/etc/init.d/S18loadmod file"
-	fi
-	
-	#/* Build /etc/modules */
-	sudo sh -c "cat << 'EOF' > "${SD_ROOTFS_PATH}/etc/modules"
-i2c-dev
-
-EOF"
-	if [ "$?" = "0" ]; then
-		sudo sh -c "chmod 644 ${SD_ROOTFS_PATH}/etc/modules"
-		echo "[INFO] Built ${SD_ROOTFS_PATH}/etc/modules"
-	fi
-
-	#/* set up /etc/fstab */
-	sudo sh -c "cat << 'EOF' >> "${SD_ROOTFS_PATH}/etc/fstab"
-/dev/mmcblk0p1  /boot           vfat    defaults        0       2  
-
-EOF"
-	if [ "$?" = "0" ]; then
-		sudo sh -c "mkdir -p ${SD_ROOTFS_PATH}/boot"
-		echo "[INFO] Set up ${SD_ROOTFS_PATH}/etc/fstab"
-	fi
-	
-	if [ "$MODEL" = "2b-pg-fla3" ]; then
-		#/* build /etc/udev/rules.d/40-pgr.rules */
-		sudo sh -c "cat << 'EOF' > "${SD_ROOTFS_PATH}/etc/udev/rules.d/40-pgr.rules"
-
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2000\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2001\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2002\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2003\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2004\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"2005\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3000\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3001\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3004\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3005\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3006\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3007\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3008\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"300A\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"300B\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3100\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3101\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3102\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3103\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3104\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3105\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3106\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3107\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3108\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3109\", MODE=\"0664\", GROUP=\"$grpname\"
-ATTRS{idVendor}==\"1e10\", ATTRS{idProduct}==\"3300\", MODE=\"0664\", GROUP=\"$grpname\"
-KERNEL==\"raw1394\", MODE=\"0664\", GROUP=\"$grpname\"
-KERNEL==\"video1394*\", MODE=\"0664\", GROUP=\"$grpname\"
-SUBSYSTEM==\"firewire\", GROUP=\"pgrimaging\"
-SUBSYSTEM==\"usb\", GROUP=\"pgrimaging\"
-
-EOF"
-		if [ "$?" = "0" ]; then
-			sudo sh -c "chmod 644 ${SD_ROOTFS_PATH}/etc/udev/rules.d/40-pgr.rules"
-			echo "[INFO] Built ${SD_ROOTFS_PATH}/etc/udev/rules.d/40-pgr.rules"
-		fi
-		#/* set up /etc/group */
-		sudo sh -c "cat << 'EOF' >> "${SD_ROOTFS_PATH}/etc/group"
-pgrimaging:x:1001:root
-
-EOF"
-		if [ "$?" = "0" ]; then
-			echo "[INFO] Set up ${SD_ROOTFS_PATH}/etc/group"
-		fi
-		
-		FLY_CAPTURE_PATH="/home/oscargomez/Desktop/point_grey_documents/flycapture.2.9.3.13_armhf"
-		sudo sh -c "cp -r --preserve=mode ${FLY_CAPTURE_PATH}/bin/ ${FLY_CAPTURE_PATH}/include/ ${FLY_CAPTURE_PATH}/lib/ ${SD_ROOTFS_PATH}"
-		if [ "$?" = "0" ]; then
-			echo "[INFO] Point Grey Flea3 Fly capture bins for arm saved correctly to ${SD_ROOTFS_PATH}"
-		fi
 	fi
 	
 	#/* umount sd rootfs partition */
