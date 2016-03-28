@@ -25,7 +25,7 @@ if [ "$#" != "2" ]; then
 	echo "\t\t2b  -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
 	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: XXX"
 	echo "\t-- special models --"
-	echo "\t\t2b-pg-fla3 -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
+	echo "\t\t2b-flea3 -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
 	exit 1
 fi
 
@@ -48,12 +48,12 @@ elif [ "$MODEL" = "cm" ]; then
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
 	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
-elif [ "$MODEL" = "2b-pg-fla3" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-point-grey-flea3"
+elif [ "$MODEL" = "2b-flea3" ]; then
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-flea3"
 	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-3b.dtb"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2710-rpi-3b.dtb"
 else
 	echo "[ERROR] Raspberry pi model unknown: $MODEL"
 	exit 1
