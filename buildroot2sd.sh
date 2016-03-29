@@ -86,6 +86,12 @@ elif [ "$DRIVE" = "${DRIVE%"/dev/"*}" ]; then
 	#/* /dev/ is NOT in $DRIVE */
     echo "[ERROR] DANGER!! You're trying to use a not /dev/* device"
     exit 1
+elif [ "$SD_BOOT_PATH" = "" ]; then
+    echo "[ERROR] DANGER!! SD_BOOT_PATH is emty"
+    exit 1
+elif [ "$SD_ROOTFS_PATH" = "" ]; then
+    echo "[ERROR] DANGER!! SD_ROOTFS_PATH is emty"
+    exit 1
 fi
 
 if [ ! -e $DRIVE ]; then

@@ -45,7 +45,6 @@ echo "[INFO] You've just decided to use the partition table of your: $DRIVE"
 #/* Name of partitions */
 NAME_P1="boot" 
 NAME_P2="rootfs" 
-PATH_SD="/mnt/sd_media" 
 
 echo "[INFO] drive $DRIVE" 
 
@@ -78,57 +77,51 @@ sleep 1
 DRIVE_NAME=$(basename $DRIVE)
 DEV_DIR=$(dirname $DRIVE)
 
-if [ -e $BOOT_AND_FW -a -e $KERNEL -a -e $ROOTFS ]; then 
+#Partition 1
+PARTITION1=${DRIVE}1
+if [ ! -b $PARTITION1 ]; then
+	PARTITION1=${DRIVE}p1
+fi
 
-	#Partition 1
-	PARTITION1=${DRIVE}1
-	if [ ! -b $PARTITION1 ]; then
-		PARTITION1=${DRIVE}p1
-	fi
+if [ ! -b $PARTITION1 ]; then
+	PARTITION1=${DEV_DIR}/mapper/${DRIVE_NAME}p1
+fi
 
-	if [ ! -b $PARTITION1 ]; then
-		PARTITION1=${DEV_DIR}/mapper/${DRIVE_NAME}p1
-	fi
+PARTITION2=${DRIVE}2
+if [ ! -b $PARTITION2 ]; then
+	PARTITION2=${DRIVE}p2
+fi
+if [ ! -b $PARTITION2 ]; then
+	PARTITION2=${DEV_DIR}/mapper/${DRIVE_NAME}p2
+fi
 
-	PARTITION2=${DRIVE}2
-	if [ ! -b $PARTITION2 ]; then
-		PARTITION2=${DRIVE}p2
-	fi
-	if [ ! -b $PARTITION2 ]; then
-		PARTITION2=${DEV_DIR}/mapper/${DRIVE_NAME}p2
-	fi
-
-	#/* now make partitions. */
-	#/* partition 1. */
-	if [ -b $PARTITION1 ]; then    
-		umount $PARTITION1 > /dev/null 2>&1
-		mkfs.vfat -F 32 -n $NAME_P1 $PARTITION1 > /dev/null 2>&1
-		if [ "$?" = "0" ]; then
-			echo "[INFO] Created vfat partition for boot in $PARTITION1" 
-		else
-			echo "[ERROR] Error creating vfat partition for boot in $PARTITION1" 
-			exit 1
-		fi    
+#/* now make partitions. */
+#/* partition 1. */
+if [ -b $PARTITION1 ]; then    
+	umount $PARTITION1 > /dev/null 2>&1
+	mkfs.vfat -F 32 -n $NAME_P1 $PARTITION1 > /dev/null 2>&1
+	if [ "$?" = "0" ]; then
+		echo "[INFO] Created vfat partition for boot in $PARTITION1" 
 	else
-		echo "[ERROR] Can't find boot partition in /dev" 
+		echo "[ERROR] Error creating vfat partition for boot in $PARTITION1" 
 		exit 1
-	fi
-	#/* partition 2. */
-	if [ -b $PARITION2 ]; then
-		umount $PARTITION2 > /dev/null 2>&1
-		mkfs.ext4 -L $NAME_P2 $PARTITION2 > /dev/null 2>&1
-		if [ "$?" = "0" ]; then
-			echo "[INFO] Created ext4 partition for rootfs in $PARTITION2" 
-		else
-			echo "[INFO] Error creating ext4 partition for rootfs in $PARTITION2" 
-			exit 1
-		fi
+	fi    
+else
+	echo "[ERROR] Can't find boot partition in /dev" 
+	exit 1
+fi
+#/* partition 2. */
+if [ -b $PARITION2 ]; then
+	umount $PARTITION2 > /dev/null 2>&1
+	mkfs.ext4 -L $NAME_P2 $PARTITION2 > /dev/null 2>&1
+	if [ "$?" = "0" ]; then
+		echo "[INFO] Created ext4 partition for rootfs in $PARTITION2" 
 	else
-		echo "[INFO] Can't find rootfs partition in /dev" 
+		echo "[INFO] Error creating ext4 partition for rootfs in $PARTITION2" 
 		exit 1
 	fi
 else
-	echo "[ERROR] Files missing for $NAME_P1 partiton!" 
+	echo "[INFO] Can't find rootfs partition in /dev" 
 	exit 1
 fi
 
