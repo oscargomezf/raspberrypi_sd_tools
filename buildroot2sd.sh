@@ -26,6 +26,7 @@ if [ "$#" != "2" ]; then
 	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: XXX"
 	echo "\t-- special models --"
 	echo "\t\t2b-flea3 -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
+	echo "\t\t2b-x     -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
 	exit 1
 fi
 
@@ -51,6 +52,9 @@ elif [ "$MODEL" = "2b" ]; then
 elif [ "$MODEL" = "2b-flea3" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-flea3"
 	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
+elif [ "$MODEL" = "2b-x" ]; then
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-x"
+	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
 	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2710-rpi-3b.dtb"
@@ -72,8 +76,8 @@ KERNEL="${BUILDROOT_PATH}/output/images/kernel-marked/zImage"
 #/* root fs */
 ROOTFS="${BUILDROOT_PATH}/output/images/rootfs.tar"
 SD_PATH="/mnt/sd_media"
-SD_BOOT_PATH="/media/oscargomez/boot"
-SD_ROOTFS_PATH="/media/oscargomez/rootfs"
+SD_BOOT_PATH="/media/${USER}/boot"
+SD_ROOTFS_PATH="/media/${USER}/rootfs"
 BR_TARGET_PATH="${BUILDROOT_PATH}/output/target"
 
 if [ "$DIRVE" = "/dev/sda" ]; then
