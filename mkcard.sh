@@ -48,7 +48,7 @@ NAME_P2="rootfs"
 
 echo "[INFO] drive $DRIVE" 
 
-dd if=/dev/zero of=$DRIVE bs=1024 count=1024 #> /dev/null 2>&1
+dd if=/dev/zero of=$DRIVE bs=1024 count=1024 > /dev/null 2>&1
 if [ "$?" = "0" ]; then
 	echo  "[INFO] SD card deleted successfully" 
 fi
@@ -62,7 +62,7 @@ echo "[INFO] Number Cylinders: $CYLINDERS"
 {
 	echo ,9,0x0C,*
 	echo ,,,-
-} | sfdisk -D -H 255 -S 63 -C $CYLINDERS $DRIVE #> /dev/null 2>&1
+} | sfdisk -D -H 255 -S 63 -C $CYLINDERS $DRIVE > /dev/null 2>&1
 
 sleep 1
 exit 1
