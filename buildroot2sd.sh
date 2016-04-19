@@ -23,7 +23,7 @@ if [ "$#" != "2" ]; then
 	echo "\t\t1b+ -> tedpi-1b+ : raspberry pi 1 B+ v1.1 code: 0010"
 	echo "\t\tcm  -> tedpi-cm  : raspberry pi cm v1.1 code: 0011"
 	echo "\t\t2b  -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
-	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: XXX"
+	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: a02082"
 	echo "\t-- special models --"
 	echo "\t\t2b-flea3 -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
 	echo "\t\t2b-x     -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
@@ -39,29 +39,31 @@ PWD=$(pwd)
 PATH_GIT="/home/${USER}/GIT/raspberrypi/buildroot"
 if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-b.dtb"
+	DTB_FILE="bcm2708-rpi-b.dtb"
 elif [ "$MODEL" = "1a+" -o "$MODEL" = "1b+" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b+"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-b-plus.dtb"
+	DTB_FILE="bcm2708-rpi-b-plus.dtb"
 elif [ "$MODEL" = "cm" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-cm"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2708-rpi-cm.dtb"
+	DTB_FILE="bcm2708-rpi-cm.dtb"
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
+	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "2b-flea3" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-flea3"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
+	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "2b-x" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-x"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2709-rpi-2-b.dtb"
+	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
-	DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/bcm2710-rpi-3b.dtb"
+	DTB_FILE="bcm2710-rpi-3-b.dtb"
 else
 	echo "[ERROR] Raspberry pi model unknown: $MODEL"
 	exit 1
 fi
+DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/${DTB_FILE}"
+
 echo "[INFO] Raspberry pi model: $MODEL"
 
 #/* boot and firmware files */
@@ -156,6 +158,9 @@ else
 		echo "[ERROR] Compiling buildroot"
 		exit 1
 	fi
+
+	echo "[INFO] Raspberry pi model: $MODEL"
+
 	#/* copy boot files to sd boot partition */
 	sudo sh -c "rm -rf ${SD_BOOT_PATH}/* > /dev/null 2>&1"
 	sudo sh -c "cp $BOOTCODE $SD_BOOT_PATH > /dev/null 2>&1"
@@ -195,7 +200,7 @@ else
 	fi
 	sudo sh -c "cp $DTB $SD_BOOT_PATH> /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
-		echo "[INFO] .dtb file copied to $SD_BOOT_PATH successfully"
+		echo "[INFO] $DTB_FILE file copied to $SD_BOOT_PATH successfully"
 	else
 		echo "[ERROR] Error copying .dtb to $SD_BOOT_PATH"
 		exit 1
@@ -227,7 +232,7 @@ else
 		echo "[ERROR] Error copying $ROOTFS file to $SD_ROOTFS_PATH"
 		exit 1
 	fi
-	
+
 	#/* umount sd rootfs partition */
 	sync
 	sudo sh -c "umount -f ${DRIVE}2 > /dev/null 2>&1"
