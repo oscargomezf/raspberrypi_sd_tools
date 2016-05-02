@@ -2,8 +2,8 @@
 #/* @file buildroot2sd.sh
 #   @author Oscar Gómez Fuente <oscargomez@tedesys.com>
 #   @ingroup TEDESYS GLOBAL S.L.
-#   @date 2016-03-23
-#   @version 1.1.0
+#   @date 2016-04-28
+#   @version 1.2.0
 #   @section DESCRIPTION
 #    Script to compile buildroot and save boot and rootfs on sd card or eMMC for different raspberry pi models
 #
@@ -25,13 +25,12 @@ if [ "$#" != "2" ]; then
 	echo "\t\t2b  -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
 	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: a02082"
 	echo "\t-- special models --"
-	echo "\t\t2b-flea3 -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
-	echo "\t\t2b-x     -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
+	echo "\t\t2b-x   -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
 	exit 1
 fi
 
 #/* Name of partitions */
-NAME_P1="boot"
+NAME_P1="BOOT"
 NAME_P2="rootfs"
 
 #/* Path of bins */
@@ -49,20 +48,19 @@ elif [ "$MODEL" = "cm" ]; then
 elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
 	DTB_FILE="bcm2709-rpi-2-b.dtb"
-elif [ "$MODEL" = "2b-flea3" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-flea3"
-	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "2b-x" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-x"
 	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
 	DTB_FILE="bcm2710-rpi-3-b.dtb"
+	DTB_OVERLAY_PI3_DISABLE_BT_FILE="pi3-disable-bt-overlay.dtb"
 else
 	echo "[ERROR] Raspberry pi model unknown: $MODEL"
 	exit 1
 fi
-DTB="${BUILDROOT_PATH}/output/images/rpi-firmware/${DTB_FILE}"
+DTB_PATH="${BUILDROOT_PATH}/output/images"
+DTB_OVERLAY_PATH="${BUILDROOT_PATH}/output/images/rpi-firmware/overlays"
 
 echo "[INFO] Raspberry pi model: $MODEL"
 
@@ -78,9 +76,17 @@ KERNEL="${BUILDROOT_PATH}/output/images/kernel-marked/zImage"
 #/* root fs */
 ROOTFS="${BUILDROOT_PATH}/output/images/rootfs.tar"
 SD_PATH="/mnt/sd_media"
-SD_BOOT_PATH="/media/${USER}/boot"
-SD_ROOTFS_PATH="/media/${USER}/rootfs"
+SD_BOOT_PATH="/media/${USER}/$NAME_P1"
+SD_ROOTFS_PATH="/media/${USER}/$NAME_P2"
 BR_TARGET_PATH="${BUILDROOT_PATH}/output/target"
+#BRCM_DRIVER_PATH="/home/${USER}/GIT/raspberrypi/wlan-firmware/firmware/brcm"
+BRCM_DRIVER_PATH="/home/${USER}/GIT/raspberrypi/firmware-nonfree/brcm80211/brcm"
+#/* wpa supplicant file configuration*/
+WPA_SUPPLICAN_FILE=$SD_ROOTFS_PATH"/etc/wpa_supplicant/wpa_supplicant.conf"
+#/* WIFI parameters */
+SSID="SSID"
+TAG="TAG"
+PASSWORD="PASSWORD"
 
 if [ "$DIRVE" = "/dev/sda" ]; then
 	echo "[ERROR] DANGER!! You're trying to use the drive of your PC"
@@ -90,14 +96,14 @@ elif [ "$DIRVE" = "/" ]; then
     exit 1
 elif [ "$DRIVE" = "${DRIVE%"/dev/"*}" ]; then
 	#/* /dev/ is NOT in $DRIVE */
-    echo "[ERROR] DANGER!! You're trying to use a not /dev/* device"
-    exit 1
+	echo "[ERROR] DANGER!! You're trying to use a not /dev/* device"
+	exit 1
 elif [ "$SD_BOOT_PATH" = "" ]; then
-    echo "[ERROR] DANGER!! SD_BOOT_PATH is emty"
-    exit 1
+	echo "[ERROR] DANGER!! SD_BOOT_PATH is emty"
+	exit 1
 elif [ "$SD_ROOTFS_PATH" = "" ]; then
-    echo "[ERROR] DANGER!! SD_ROOTFS_PATH is emty"
-    exit 1
+	echo "[ERROR] DANGER!! SD_ROOTFS_PATH is emty"
+	exit 1
 fi
 
 if [ ! -e $DRIVE ]; then
@@ -117,52 +123,61 @@ fi
 echo "[INFO] You've just decided to use the drive: $DRIVE"
 echo "[INFO] drive $DRIVE"
 
-if [ ! -f $BOOTCODE ]; then
-    echo "[ERROR] Missing file: $BOOTCODE"
-    exit 1
-elif [ ! -f $START ]; then
-    echo "[ERROR] Missing file: $START"
-    exit 1
-elif [ ! -f $FIXUP ]; then
-    echo "[ERROR] Missing file: $FIXUP"
-    exit 1
-elif [ ! -f $CONFIG ]; then
-    echo "[ERROR] Missing file: $CONFIG"
-    exit 1
-elif [ ! -f $CMDLINE ]; then
-    echo "[ERROR] Missing file: $CMDLINE"
-    exit 1
-elif [ ! -f $DTB ]; then
-    echo "[ERROR] Missing file: $DTB"
-    exit 1    
-elif [ ! -f $KERNEL ]; then
-    echo "[ERROR] Missing file: $KERNEL"
-    exit 1
-elif [ ! -f $ROOTFS ]; then
-    echo "[ERROR] Missing file: $ROOTFS"
-    exit 1
-elif [ ! -d $SD_BOOT_PATH ]; then
-    echo "[ERROR] Missing file: $SD_BOOT_PATH"
-    exit 1
-elif [ ! -d $SD_ROOTFS_PATH ]; then
-    echo "[ERROR] Missing file: $SD_ROOTFS_PATH"
-    exit 1
-else
-	#/* compile buidroot */
+#/* compile buidroot */
+if [ -d $BUILDROOT_PATH ]; then
 	cd $BUILDROOT_PATH
 	make
 	if [ "$?" = "0" ]; then
-		echo "[INFO] Compiled buildroot"
+		echo "[INFO] Compiled buildroot in: $BUILDROOT_PATH"
 		cd $PWD
 	else
-		echo "[ERROR] Compiling buildroot"
+		echo "[ERROR] Compiling buildroot in: $BUILDROOT_PATH"
 		exit 1
 	fi
+else
+	echo "[ERROR] Doesn't exist buildroot directory: $BUILDROOT_PATH"
+	exit 1
+fi
 
+if [ ! -f $BOOTCODE ]; then
+	echo "[ERROR] Missing file: $BOOTCODE"
+	exit 1
+elif [ ! -f $START ]; then
+	echo "[ERROR] Missing file: $START"
+	exit 1
+elif [ ! -f $FIXUP ]; then
+	echo "[ERROR] Missing file: $FIXUP"
+	exit 1
+elif [ ! -f $CONFIG ]; then
+	echo "[ERROR] Missing file: $CONFIG"
+	exit 1
+elif [ ! -f $CMDLINE ]; then
+	echo "[ERROR] Missing file: $CMDLINE"
+	exit 1
+elif [ ! -f $DTB_PATH/$DTB_FILE ]; then
+	echo "[ERROR] Missing file: $DTB_PATH/$DTB_FILE"
+	exit 1
+elif [ ! -f $DTB_OVERLAY_PATH/$DTB_OVERLAY_PI3_DISABLE_BT_FILE -a "$DTB_OVERLAY_PI3_DISABLE_BT_FILE" != "" ]; then
+	echo "[ERROR] Missing file: $DTB_OVERLAY_PATH/$DTB_OVERLAY_PI3_DISABLE_BT_FILE"
+	exit 1
+elif [ ! -f $KERNEL ]; then
+	echo "[ERROR] Missing file: $KERNEL"
+	exit 1
+elif [ ! -f $ROOTFS ]; then
+	echo "[ERROR] Missing file: $ROOTFS"
+	exit 1
+elif [ ! -d $SD_BOOT_PATH ]; then
+	echo "[ERROR] Missing file: $SD_BOOT_PATH"
+	exit 1
+elif [ ! -d $SD_ROOTFS_PATH ]; then
+	echo "[ERROR] Missing file: $SD_ROOTFS_PATH"
+	exit 1
+else
 	echo "[INFO] Raspberry pi model: $MODEL"
 
 	#/* copy boot files to sd boot partition */
 	sudo sh -c "rm -rf ${SD_BOOT_PATH}/* > /dev/null 2>&1"
+	#/* bootcode.bin */
 	sudo sh -c "cp $BOOTCODE $SD_BOOT_PATH > /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
 		echo "[INFO] bootcode.bin file copied to $SD_BOOT_PATH successfully"
@@ -170,6 +185,7 @@ else
 		echo "[ERROR] Error copying bootcode.bin to $SD_BOOT_PATH"
 		exit 1
 	fi
+	#/* start.elf */
 	sudo sh -c "cp $START $SD_BOOT_PATH > /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
 		echo "[INFO] start.elf file copied to $SD_BOOT_PATH successfully"
@@ -177,6 +193,7 @@ else
 		echo "[ERROR] Error copying start.elf to $SD_BOOT_PATH"
 		exit 1
 	fi
+	#/* fixup.dat */
 	sudo sh -c "cp $FIXUP $SD_BOOT_PATH > /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
 		echo "[INFO] fixup.dat file copied to $SD_BOOT_PATH successfully"
@@ -184,6 +201,7 @@ else
 		echo "[ERROR] Error copying fixup.dat to $SD_BOOT_PATH"
 		exit 1
 	fi
+	#/* config.txt */
 	sudo sh -c "cp $CONFIG $SD_BOOT_PATH > /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
 		echo "[INFO] config.txt file copied to $SD_BOOT_PATH successfully"
@@ -191,6 +209,7 @@ else
 		echo "[ERROR] Error copying config.txt to $SD_BOOT_PATH"
 		exit 1
 	fi
+	#/* cmdline.txt */
 	sudo sh -c "cp $CMDLINE $SD_BOOT_PATH > /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
 		echo "[INFO] cmdline.txt file copied to $SD_BOOT_PATH successfully"
@@ -198,12 +217,24 @@ else
 		echo "[ERROR] Error copying cmdline.txt to $SD_BOOT_PATH"
 		exit 1
 	fi
-	sudo sh -c "cp $DTB $SD_BOOT_PATH> /dev/null 2>&1"
+	#/* copy DTB file */
+	sudo sh -c "cp $DTB_PATH/$DTB_FILE $SD_BOOT_PATH> /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
 		echo "[INFO] $DTB_FILE file copied to $SD_BOOT_PATH successfully"
 	else
 		echo "[ERROR] Error copying .dtb to $SD_BOOT_PATH"
 		exit 1
+	fi
+	#/* copy DTB_OVERLAY files */
+	if [ "$DTB_OVERLAY_PI3_DISABLE_BT_FILE" != "" ]; then
+		sudo sh -c "mkdir -p $SD_BOOT_PATH/overlays"
+		sudo sh -c "cp $DTB_OVERLAY_PATH/$DTB_OVERLAY_PI3_DISABLE_BT_FILE $SD_BOOT_PATH/overlays > /dev/null 2>&1"
+		if [ "$?" = "0" ]; then
+			echo "[INFO] $DTB_OVERLAY_PI3_DISABLE_BT_FILE file copied to $SD_BOOT_PATH/overlays successfully"
+		else
+			echo "[ERROR] Error copying .dtb overlay: $DTB_OVERLAY_PI3_DISABLE_BT_FILE to $SD_BOOT_PATH/overlays"
+			exit 1
+		fi
 	fi
 	#/* copy kernel to sd boot partition */
 	sudo sh -c "cp $KERNEL $SD_BOOT_PATH > /dev/null 2>&1"
@@ -233,6 +264,24 @@ else
 		exit 1
 	fi
 
+	if [ "$DTB_OVERLAY_PI3_DISABLE_BT_FILE" != "" ]; then
+		sudo sh -c "mkdir -p $SD_ROOTFS_PATH/lib/firmware/brcm"
+		sudo sh -c "cp $BRCM_DRIVER_PATH/brcmfmac43430-sdio.* $SD_ROOTFS_PATH/lib/firmware/brcm"
+		if [ "$?" = "0" ]; then
+			echo "[INFO] brcmfmac43430-sdio.* files copied to $SD_ROOTFS_PATH/lib/firmware/brcm successfully"
+		else
+			echo "[ERROR] Error copying brcmfmac43430-sdio.* files file to $SD_ROOTFS_PATH/lib/firmware/brcm"
+			exit 1
+		fi
+		if [ -f $WPA_SUPPLICAN_FILE ]; then
+			sudo sh -c "sed -i 's/SSID/$SSID/g' $WPA_SUPPLICAN_FILE"
+			sudo sh -c "sed -i 's/TAG/$TAG/g' $WPA_SUPPLICAN_FILE"
+			sudo sh -c "sed -i 's/PASSWORD/$PASSWORD/g' $WPA_SUPPLICAN_FILE"
+		else
+			echo "[ERROR] Error modifying supplicant config file: $WPA_SUPPLICAN_FILE"
+			exit 1
+		fi
+	fi
 	#/* umount sd rootfs partition */
 	sync
 	sudo sh -c "umount -f ${DRIVE}2 > /dev/null 2>&1"
