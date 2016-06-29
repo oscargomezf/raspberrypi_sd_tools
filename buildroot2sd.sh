@@ -25,7 +25,8 @@ if [ "$#" != "2" ]; then
 	echo "\t\t2b  -> tedpi-2b  : raspberry pi 2 B v1.1 code: a01041"
 	echo "\t\t3b  -> tedpi-3b  : raspberry pi 3 B v1.1 code: a02082"
 	echo "\t-- special models --"
-	echo "\t\t2b-x   -> tedpi-2b: raspberry pi 2 B v1.1 code: a01041"
+	echo "\t\t3b-flea3 -> tedpi-3b-flea3 : raspberry pi 3 B v1.1 code: a02082"
+	echo "\t\t2b-x     -> tedpi-2b       : raspberry pi 2 B v1.1 code: a01041"
 	exit 1
 fi
 
@@ -36,6 +37,7 @@ NAME_P2="rootfs"
 #/* Path of bins */
 PWD=$(pwd)
 PATH_GIT="/home/${USER}/GIT/raspberrypi/buildroot"
+#PATH_GIT="/home/${USER}/GIT"
 if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
 	DTB_FILE="bcm2708-rpi-b.dtb"
@@ -51,16 +53,21 @@ elif [ "$MODEL" = "2b" ]; then
 elif [ "$MODEL" = "2b-x" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-x"
 	DTB_FILE="bcm2709-rpi-2-b.dtb"
-elif [ "$MODEL" = "3b" ]; then
+elif [ "$MODEL" = "3b" -o "$MODEL" = "3b-flea3" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
+	#BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02"
 	DTB_FILE="bcm2710-rpi-3-b.dtb"
 	DTB_OVERLAY_PI3_DISABLE_BT_FILE="pi3-disable-bt-overlay.dtb"
+	#DTB_OVERLAY_PI3_DISABLE_BT_FILE="pi3-disable-bt.dtbo"
+	#DTB_OVERLAY_PI3_DISABLE_BT_FILE="pi3-miniuart-bt.dtb"
 else
 	echo "[ERROR] Raspberry pi model unknown: $MODEL"
 	exit 1
 fi
+
 DTB_PATH="${BUILDROOT_PATH}/output/images"
 DTB_OVERLAY_PATH="${BUILDROOT_PATH}/output/images/rpi-firmware/overlays"
+DTB_TCA6424A_OVERLAY="tca6424a-overlay.dtb"
 
 echo "[INFO] Raspberry pi model: $MODEL"
 
@@ -84,9 +91,9 @@ BRCM_DRIVER_PATH="/home/${USER}/GIT/raspberrypi/firmware-nonfree/brcm80211/brcm"
 #/* wpa supplicant file configuration*/
 WPA_SUPPLICAN_FILE=$SD_ROOTFS_PATH"/etc/wpa_supplicant/wpa_supplicant.conf"
 #/* WIFI parameters */
-SSID="SSID"
-TAG="TAG"
-PASSWORD="PASSWORD"
+SSID="WLAN_TED"
+TAG="tedesys"
+PASSWORD="b719a793c74f5be270f1a1a4f23766d640ec7723bf9c053c4e627a57f7c23786"
 
 if [ "$DIRVE" = "/dev/sda" ]; then
 	echo "[ERROR] DANGER!! You're trying to use the drive of your PC"
@@ -172,6 +179,9 @@ elif [ ! -d $SD_BOOT_PATH ]; then
 elif [ ! -d $SD_ROOTFS_PATH ]; then
 	echo "[ERROR] Missing file: $SD_ROOTFS_PATH"
 	exit 1
+elif [ "$MODEL" = "3b-flea3" -a ! -f ${DTB_OVERLAY_PATH}/${DTB_TCA6424A_OVERLAY} ]; then
+	echo "[ERROR] Missing tca6424a-overlay.dtb file"
+	exit 1
 else
 	echo "[INFO] Raspberry pi model: $MODEL"
 
@@ -236,6 +246,17 @@ else
 			exit 1
 		fi
 	fi
+	#/* copy DTB_TCA6424A_OVERLAY */
+	if [ "$MODEL" = "3b-flea3" ]; then
+		sudo sh -c "mkdir -p $SD_BOOT_PATH/overlays"
+		sudo sh -c "cp $DTB_OVERLAY_PATH/$DTB_TCA6424A_OVERLAY $SD_BOOT_PATH/overlays > /dev/null 2>&1"
+		if [ "$?" = "0" ]; then
+			echo "[INFO] $DTB_TCA6424A_OVERLAY file copied to $SD_BOOT_PATH/overlays successfully"
+		else
+			echo "[ERROR] Error copying .dtb overlay: $DTB_TCA6424A_OVERLAY to $SD_BOOT_PATH/overlays"
+			exit 1
+		fi
+	fi
 	#/* copy kernel to sd boot partition */
 	sudo sh -c "cp $KERNEL $SD_BOOT_PATH > /dev/null 2>&1"
 	if [ "$?" = "0" ]; then
@@ -274,6 +295,7 @@ else
 			exit 1
 		fi
 		if [ -f $WPA_SUPPLICAN_FILE ]; then
+			echo "[INFO] Creating wpa supplicant file: $WPA_SUPPLICAN_FILE"
 			sudo sh -c "sed -i 's/SSID/$SSID/g' $WPA_SUPPLICAN_FILE"
 			sudo sh -c "sed -i 's/TAG/$TAG/g' $WPA_SUPPLICAN_FILE"
 			sudo sh -c "sed -i 's/PASSWORD/$PASSWORD/g' $WPA_SUPPLICAN_FILE"
