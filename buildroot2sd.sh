@@ -1,13 +1,13 @@
 #!/bin/sh
-#/* @file buildroot2sd.sh
-#   @author Oscar Gómez Fuente <oscargomez@tedesys.com>
-#   @ingroup TEDESYS GLOBAL S.L.
-#   @date 2016-04-28
-#   @version 1.2.0
-#   @section DESCRIPTION
-#    Script to compile buildroot and save boot and rootfs on sd card or eMMC for different raspberry pi models
+#/** @file buildroot2sd.sh
+#    @author Oscar Gomez Fuente <oscargomezf@gmail.com>
+#    @ingroup iElectronic
+#    @version 1.3.0
+#    @date 2016-07-27
+#    @section DESCRIPTION
+#      Script to compile buildroot and save boot and rootfs on sd card or eMMC for different raspberry pi models
 #
-#*/
+# */
 
 export LC_ALL=C
 
@@ -42,7 +42,7 @@ if [ "$MODEL" = "1a" -o "$MODEL" = "1b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
 	DTB_FILE="bcm2708-rpi-b.dtb"
 elif [ "$MODEL" = "1a+" -o "$MODEL" = "1b+" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b+"
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-1b"
 	DTB_FILE="bcm2708-rpi-b-plus.dtb"
 elif [ "$MODEL" = "cm" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-cm"
@@ -51,11 +51,11 @@ elif [ "$MODEL" = "2b" ]; then
 	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
 	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "2b-x" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b-x"
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-2b"
 	DTB_FILE="bcm2709-rpi-2-b.dtb"
 elif [ "$MODEL" = "3b" -o "$MODEL" = "3b-flea3" ]; then
-	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
-	#BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02"
+	#BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-tedpi-3b"
+	BUILDROOT_PATH="${PATH_GIT}/buildroot-2016.02-samia"
 	DTB_FILE="bcm2710-rpi-3-b.dtb"
 	DTB_OVERLAY_PI3_DISABLE_BT_FILE="pi3-disable-bt-overlay.dtb"
 	#DTB_OVERLAY_PI3_DISABLE_BT_FILE="pi3-disable-bt.dtbo"
@@ -68,6 +68,7 @@ fi
 DTB_PATH="${BUILDROOT_PATH}/output/images"
 DTB_OVERLAY_PATH="${BUILDROOT_PATH}/output/images/rpi-firmware/overlays"
 DTB_TCA6424A_OVERLAY="tca6424a-overlay.dtb"
+DTB_ADS7846_OVERLAY="ads7846-overlay.dtb"
 
 echo "[INFO] Raspberry pi model: $MODEL"
 
@@ -91,9 +92,9 @@ BRCM_DRIVER_PATH="/home/${USER}/GIT/raspberrypi/firmware-nonfree/brcm80211/brcm"
 #/* wpa supplicant file configuration*/
 WPA_SUPPLICAN_FILE=$SD_ROOTFS_PATH"/etc/wpa_supplicant/wpa_supplicant.conf"
 #/* WIFI parameters */
-SSID="WLAN_TED"
-TAG="tedesys"
-PASSWORD="b719a793c74f5be270f1a1a4f23766d640ec7723bf9c053c4e627a57f7c23786"
+SSID="WLAN_XXX"
+TAG="XXXXX"
+PASSWORD="XXXXX"
 
 if [ "$DIRVE" = "/dev/sda" ]; then
 	echo "[ERROR] DANGER!! You're trying to use the drive of your PC"
@@ -179,8 +180,11 @@ elif [ ! -d $SD_BOOT_PATH ]; then
 elif [ ! -d $SD_ROOTFS_PATH ]; then
 	echo "[ERROR] Missing file: $SD_ROOTFS_PATH"
 	exit 1
+elif [ "$MODEL" = "2b-x" -a ! -f ${DTB_OVERLAY_PATH}/${DTB_ADS7846_OVERLAY} ]; then
+	echo "[ERROR] Missing ${DTB_ADS7846_OVERLAY} file"
+	exit 1
 elif [ "$MODEL" = "3b-flea3" -a ! -f ${DTB_OVERLAY_PATH}/${DTB_TCA6424A_OVERLAY} ]; then
-	echo "[ERROR] Missing tca6424a-overlay.dtb file"
+	echo "[ERROR] Missing ${DTB_TCA6424A_OVERLAY} file"
 	exit 1
 else
 	echo "[INFO] Raspberry pi model: $MODEL"
@@ -243,6 +247,17 @@ else
 			echo "[INFO] $DTB_OVERLAY_PI3_DISABLE_BT_FILE file copied to $SD_BOOT_PATH/overlays successfully"
 		else
 			echo "[ERROR] Error copying .dtb overlay: $DTB_OVERLAY_PI3_DISABLE_BT_FILE to $SD_BOOT_PATH/overlays"
+			exit 1
+		fi
+	fi
+	#/* copy DTB_ADS7846_OVERLAY */
+	if [ "$MODEL" = "2b-x" ]; then
+		sudo sh -c "mkdir -p $SD_BOOT_PATH/overlays"
+		sudo sh -c "cp $DTB_OVERLAY_PATH/$DTB_ADS7846_OVERLAY $SD_BOOT_PATH/overlays > /dev/null 2>&1"
+		if [ "$?" = "0" ]; then
+			echo "[INFO] $DTB_ADS7846_OVERLAY file copied to $SD_BOOT_PATH/overlays successfully"
+		else
+			echo "[ERROR] Error copying .dtb overlay: $DTB_ADS7846_OVERLAY to $SD_BOOT_PATH/overlays"
 			exit 1
 		fi
 	fi

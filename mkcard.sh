@@ -1,16 +1,16 @@
 #! /bin/sh
-#/* @file mkcard.sh
-#   @author Oscar Gómez Fuente <oscargomez@tedesys.com>
-#   @ingroup TEDESYS GLOBAL S.L.
-#   @date 2016-04-28
-#   @version 1.2.0
-#   @section DESCRIPTION
-#    Script to format sd card  with two partition boot.vfat (boot flag) and rootfs.ext4
-#    Resources:
+#/** @file mkcard.sh
+#    @author Oscar Gomez Fuente <oscargomezf@gmail.com>
+#    @ingroup ielectronic
+#    @version $Rev: 17 $
+#    @date $Date: 2016-06-29 11:05:27 +0200 (mié, 29 jun 2016) $
+#    @section DESCRIPTION
+#      Script to format sd card  with two partition boot.vfat (boot flag) and rootfs.ext4
+#      Resources:
 #      
-#       Parts of the procudure base on the work of Denys Dmytriyenko
-#    http://wiki.omap.com/index.php/MMC_Boot_Format
-#*/
+#        Parts of the procudure base on the work of Denys Dmytriyenko
+#        http://wiki.omap.com/index.php/MMC_Boot_Format
+# */
 
 export LC_ALL=C
 
