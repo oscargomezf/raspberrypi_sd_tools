@@ -133,6 +133,12 @@ echo "[INFO] drive $DRIVE"
 
 #/* compile buidroot */
 if [ -d $BUILDROOT_PATH ]; then
+	#/* solve this bug: https://bugs.busybox.net/show_bug.cgi?id=8696. */
+	#/* Bug 8696 - xdriver_xf86-input-mouse install header files in target directory */
+	if [ -d "$BR_TARGET_PATH/home/$USER" ]; then
+		sudo sh -c "rm -rf ${BR_TARGET_PATH}/home/${USER} > /dev/null 2>&1"
+	fi
+
 	cd $BUILDROOT_PATH
 	make
 	if [ "$?" = "0" ]; then
